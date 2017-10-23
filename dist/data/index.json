@@ -1,0 +1,47 @@
+{
+  "data": [{
+    "mimeType": "image/jpg",
+    "pattern": "{theta}_{phi}.jpg",
+    "type": "blob",
+    "name": "image",
+    "metadata": {}
+  }],
+  "type": ["tonic-query-data-model"],
+  "arguments": {
+    "theta": {
+      "values": ["0"],
+      "ui": "slider",
+      "name": "theta",
+      "bind": {
+        "mouse": {
+          "drag": {
+            "coordinate": 1,
+            "step": 30,
+            "modifier": 0,
+            "orientation": 1
+          }
+        }
+      }
+    },
+    "phi": {
+      "values": ["0", "45", "90", "135", "180", "225", "270", "315"],
+      "bind": {
+        "mouse": {
+          "drag": {
+            "coordinate": 0,
+            "step": 30,
+            "modifier": 0,
+            "orientation": 1
+          }
+        }
+      },
+      "ui": "slider",
+      "name": "phi",
+      "loop": "modulo"
+    }
+  },
+  "arguments_order": ["phi", "theta"],
+  "metadata": {
+    "backgroundColor": "rgb(0, 0, 0)"
+  }
+}

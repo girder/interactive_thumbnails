@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head>
+  <body>
+    <div class="content"></div>
+    <script type="text/javascript" src="dynanail.js"></script>
+    <script type="text/javascript">
+      dynanail.bindTumbnailToImage({
+        data: [{
+          mimeType: 'image/jpg',
+          pattern: '0_{phi}.jpg',
+          type: 'blob',
+          name: 'image',
+        }],
+        arguments: {
+          phi: {
+            values: ['0', '45', '90', '135', '180', '225', '270', '315'],
+            bind: {
+              mouse: {
+                drag: {
+                  coordinate: 0,
+                  step: 30,
+                  modifier: 0,
+                  orientation: 1,
+                },
+              },
+            },
+            ui: 'slider',
+            name: 'phi',
+            loop: 'modulo',
+          },
+        },
+        arguments_order: ['phi'],
+      }, document.querySelector('.content'), '/data/');
+    </script>
+  </body>
+</html>
