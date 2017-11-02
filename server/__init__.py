@@ -29,6 +29,13 @@ def _handleUpload(event):
             Item().update({'_id': item['_id']}, {'$set': {'has3dThumbnail': True}}, multi=False)
 
 
+def _removeThumbnails(event):
+  rm = File().remove
+
+  for file in File().find({'attachedToId': event.info['_id']}):
+    rm(file)
+
+
 @access.public
 @autoDescribeRoute(
     Description('Download a 3d thumbnail image for a given item.')
@@ -47,6 +54,7 @@ def _get3dThumbnail(item, uid):
 
 
 def load(info):
+    events.bind('model.item.remove', info['name'], _removeThumbnails)
     events.bind('model.file.finalizeUpload.after', info['name'], _handleUpload)
     File().ensureIndex(([('3d_thumbnails_uid', 1), ('attachedToId', 1)], {'sparse': True}))
     File().exposeFields(level=AccessType.READ, fields={'3d_thumbnails_info'})
@@ -54,4 +62,4 @@ def load(info):
 
     info['apiRoot'].item.route('GET', (':id', '3d_thumbnail', ':uid'), _get3dThumbnail)
 
-    # TODO cleanup 3d thumbnails that are attached to items being deleted
+    # TODO figure out how to remove existing 3d thumbnails on an item when a new set is uploaded

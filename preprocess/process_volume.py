@@ -7,6 +7,7 @@
 # -----------------------------------------------------------------------------
 
 import click
+import ctypes
 from vtk import (
     vtkMetaImageReader, vtkGPUVolumeRayCastMapper, vtkColorTransferFunction, vtkPiecewiseFunction,
     vtkVolumeProperty, vtkVolume, vtkRenderWindow, vtkRenderer, vtkCamera, VTK_LINEAR_INTERPOLATION)
@@ -16,6 +17,10 @@ from vtk.web.dataset_builder import ImageDataSetBuilder, update_camera
 __version__ = '0.1.0'
 DEFAULT_WIDTH = 512
 DEFAULT_HEIGHT = 512
+
+# Unfortunately this hack is necessary to get the libOSMesa symbols loaded into
+# the global namespace, presumably because they are weakly linked by VTK
+ctypes.CDLL('libOSMesa.so', ctypes.RTLD_GLOBAL)
 
 
 def arc_samples(n_samples):
