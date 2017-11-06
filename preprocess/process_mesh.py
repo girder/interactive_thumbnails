@@ -11,66 +11,87 @@ from vtk import *
 from vtk.web.query_data_model import *
 from vtk.web.dataset_builder import *
 
-# -----------------------------------------------------------------------------
-# User configuration
-# -----------------------------------------------------------------------------
 
-dataset_destination_path = '/Users/seb/Documents/code/girder-thumbnail/data-obj'
-file_path = '/Users/seb/Desktop/UH-60 Blackhawk/uh60.obj'
+import click
+import ctypes
+from vtk import (
+    vtkOBJReader, vtkPolyDataMapper, vtkActor, vtkRenderWindow, vtkRenderer, vtkCamera)
 
-# -----------------------------------------------------------------------------
-# VTK Pipeline creation
-# -----------------------------------------------------------------------------
+from vtk.web.dataset_builder import ImageDataSetBuilder, update_camera
 
-reader = vtkOBJReader()
-reader.SetFileName(file_path)
-reader.Update()
+__version__ = '0.1.0'
+DEFAULT_WIDTH = 512
+DEFAULT_HEIGHT = 512
 
-
-mapper = vtkPolyDataMapper()
-mapper.SetInputConnection(reader.GetOutputPort())
+# Unfortunately this hack is necessary to get the libOSMesa symbols loaded into
+# the global namespace, presumably because they are weakly linked by VTK
+ctypes.CDLL('libOSMesa.so', ctypes.RTLD_GLOBAL)
 
 
-actor = vtkActor()
-actor.SetMapper(mapper)
-
-window = vtkRenderWindow()
-window.SetSize(512, 512)
-
-renderer = vtkRenderer()
-window.AddRenderer(renderer)
-
-renderer.AddVolume(actor)
-
-camera = vtkCamera()
-renderer.SetActiveCamera(camera)
-
-window.Render()
-renderer.ResetCamera()
-window.Render()
+def arc_samples(n_samples):
+    step = 360. / n_samples
+    return [step * i for i in range(n_samples)]
 
 
-# Camera setting
-camera = {
-    'position': [v for v in camera.GetFocalPoint()],
-    'focalPoint': camera.GetFocalPoint(),
-    'viewUp': [1,0,0]
-}
-camera['position'][2] += 100
-update_camera(renderer, camera)
-window.Render()
-renderer.ResetCamera()
-window.Render()
+@click.command()
+@click.argument('in_file', type=click.Path(exists=True, dir_okay=False))
+@click.argument('out_dir', type=click.Path(file_okay=False))
+@click.option('--width', default=DEFAULT_WIDTH, help='output image width (px)')
+@click.option('--height', default=DEFAULT_HEIGHT, help='output image height (px)')
+@click.option('--phi-samples', default=8, help='number of samples in phi dimension')
+@click.option('--theta-samples', default=1, help='number of samples in theta dimension')
+@click.version_option(version=__version__, prog_name='Process a volume image into a 3d thumbnail')
+def process(in_file, out_dir, width, height, phi_samples, theta_samples):
+    phi_vals = arc_samples(phi_samples)
+    theta_vals = arc_samples(theta_samples)
 
-# -----------------------------------------------------------------------------
-# Data Generation
-# -----------------------------------------------------------------------------
+    reader = vtkOBJReader()
+    reader.SetFileName(in_file)
+    reader.Update()
 
-# Create Image Builder
-idb = ImageDataSetBuilder(dataset_destination_path, 'image/jpg', {'type': 'spherical', 'phi': range(0, 360, 45), 'theta': [0]})
+    mapper = vtkPolyDataMapper()
+    mapper.SetInputConnection(reader.GetOutputPort())
 
-idb.start(window, renderer)
-idb.writeImages()
-idb.stop()
+    actor = vtkActor()
+    actor.SetMapper(mapper)
+
+    window = vtkRenderWindow()
+    window.SetSize(512, 512)
+
+    renderer = vtkRenderer()
+    window.AddRenderer(renderer)
+
+    renderer.AddVolume(actor)
+
+    camera = vtkCamera()
+    renderer.SetActiveCamera(camera)
+
+    window.Render()
+    renderer.ResetCamera()
+    window.Render()
+
+    # Camera setting
+    camera = {
+        'position': [v for v in camera.GetFocalPoint()],
+        'focalPoint': camera.GetFocalPoint(),
+        'viewUp': [1,0,0]
+    }
+    camera['position'][2] += 100
+    update_camera(renderer, camera)
+    window.Render()
+    renderer.ResetCamera()
+    window.Render()
+
+    idb = ImageDataSetBuilder(out_dir, 'image/jpg', {
+        'type': 'spherical',
+        'phi': phi_vals,
+        'theta': theta_vals
+    })
+
+    idb.start(window, renderer)
+    idb.writeImages()
+    idb.stop()
 
 
+if __name__ == '__main__':
+    process()

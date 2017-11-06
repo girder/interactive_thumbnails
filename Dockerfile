@@ -6,4 +6,4 @@ RUN pip install click
 
 COPY ./preprocess /preprocess_scripts
 
-ENTRYPOINT ["python", "/preprocess_scripts/process_volume.py"]
+ENTRYPOINT ["python", "/preprocess_scripts/process_mesh.py"]
