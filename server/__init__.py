@@ -11,7 +11,7 @@ from girder.plugins.jobs.models.job import Job
 from girder.plugins.worker.utils import girderInputSpec, girderOutputSpec, jobInfoSpec
 
 _PHI_SAMPLES = 8
-_THETA_SAMPLES = 3
+_THETA_SAMPLES = 5
 _SIZE = 512
 _CREATE_TASK = {
     'mode': 'docker',
