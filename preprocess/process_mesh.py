@@ -56,7 +56,7 @@ def process(in_file, out_dir, width, height, phi_samples, theta_samples):
     actor.SetMapper(mapper)
 
     window = vtkRenderWindow()
-    window.SetSize(512, 512)
+    window.SetSize(width, height)
 
     renderer = vtkRenderer()
     window.AddRenderer(renderer)
@@ -74,7 +74,7 @@ def process(in_file, out_dir, width, height, phi_samples, theta_samples):
     camera = {
         'position': [v for v in camera.GetFocalPoint()],
         'focalPoint': camera.GetFocalPoint(),
-        'viewUp': [1,0,0]
+        'viewUp': [1, 0, 0]
     }
     camera['position'][2] += 100
     update_camera(renderer, camera)

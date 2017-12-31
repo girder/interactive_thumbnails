@@ -3,16 +3,16 @@ import { getApiRoot, restRequest } from 'girder/rest';
 import QueryDataModel from 'paraviewweb/src/IO/Core/QueryDataModel';
 import MouseHandler from 'paraviewweb/src/Interaction/Core/MouseHandler';
 
-import template from './viewerWidget.pug'
+import template from './viewerWidget.pug';
 import './viewerWidget.styl';
 
 const ViewerWidget = View.extend({
-    className: 'g-3d-thumbnail-viewer-container',
+    className: 'g-interactive-thumbnail-viewer-container',
 
     initialize: function (settings) {
         this._indexJson = settings.indexJson || null;
         this._awaitRender = false;
-        this._basePath =  `item/${this.model.id}/3d_thumbnail/`;
+        this._basePath =  `item/${this.model.id}/interactive_thumbnail/`;
     },
 
     render: function () {
@@ -24,7 +24,7 @@ const ViewerWidget = View.extend({
 
         this.$el.html(template());
 
-        const container = this.$('.g-3d-thumbnail-viewer-inner')[0];
+        const container = this.$('.g-interactive-thumbnail-viewer')[0];
         const queryDataModel = new QueryDataModel(this._indexJson, `${getApiRoot()}/${this._basePath}`);
         const mouseHandler = new MouseHandler(container);
 
@@ -49,6 +49,8 @@ const ViewerWidget = View.extend({
             }
         });
     }
+
+    // TODO(zachmullen) do we need to implement destructor?
 });
 
 export default ViewerWidget;

@@ -1,16 +1,20 @@
-import ItemView from 'girder/views/body/ItemView';
-import { wrap } from 'girder/utilities/PluginUtils';
+import $ from 'jQuery';
+import events from 'girder/events';
+import FolderModel from 'girder/models/FolderModel';
+import ItemCollection from 'girder/collections/ItemCollection';
+import router from 'girder/router';
 
-import ViewerWidget from './viewer/ViewerWidget';
+import FolderListView from './folderListView/FolderListView';
 
-wrap(ItemView, 'render', function (render) {
-    this.once('g:rendered', () => {
-        if (this.model.get('has3dThumbnail')) {
-            new ViewerWidget({
-                parentView: this,
-                model: this.model
-            }).render().$el.insertAfter(this.$('.g-item-info'));
-        }
+router.route('folder/:id/interactive_thumbnails', (id) => {
+    const items = new ItemCollection();
+    const folder = new FolderModel({
+        _id: id
     });
-    return render.call(this);
+    $.when(folder.fetch(), items.fetch({folderId: id})).then(() => {
+        events.trigger('g:navigateTo', FolderListView, {
+            folder,
+            items
+        }, {renderNow: true});
+    });
 });

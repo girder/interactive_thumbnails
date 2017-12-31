@@ -1,0 +1,20 @@
+.g-body-title
+  i.icon-folder-open
+  | Visual explorer: #[a(href=`#folder/${folder.id}`)= folder.name()]
+.g-body-subtitle
+  i.icon-move
+  | Click and drag any preview thumbnail to rotate view
+
+.g-interactive-thumbnail-list-container
+  ol.g-interactive-thumbnail-list
+    each item in items
+      li
+        .g-viewer-area
+          if item.get('hasInteractiveThumbnail')
+            .g-viewer-widget-wrapper(item-cid=item.cid)
+          else
+            .g-no-interactive-thumbnail #[i.icon-block] No thumbnail
+        .g-item-title-container(title=item.name())
+          = item.name()
+          span.g-text-fade
+        .g-actions-button

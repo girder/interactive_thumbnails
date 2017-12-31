@@ -1,0 +1,52 @@
+$thumbsize = 256px
+$cardpad = 9px
+
+.g-interactive-thumbnail-list-container
+  background linear-gradient(top, #e4e4e4 0, #efefef 4px)
+  background-color #efefef
+  border-top 1px solid #ddd
+  margin-top 15px
+
+  >ol
+    list-style none
+    padding 0 10px 15px 10px
+
+    >li
+      background-color white
+      box-shadow 0 2px 4px rgba(0, 0, 0, .1)
+      display inline-block
+      margin 15px 10px 0 10px
+      position relative
+      width $thumbsize + 18px
+      height $thumbsize + 80px
+      padding $cardpad
+
+      .g-viewer-area
+        background-color black
+        width $thumbsize
+        height $thumbsize
+
+        >.g-viewer-widget-wrapper
+          height 100%
+
+        >.g-no-interactive-thumbnail
+          color white
+          font-weight bold
+          font-size 20px
+          text-align center
+          line-height $thumbsize
+
+      .g-item-title-container
+        margin-top 7px
+        display inline-block
+        font-size 17px
+        max-width 100%
+        overflow hidden
+        white-space nowrap
+
+        .g-text-fade
+          background linear-gradient(left, rgba(255, 255, 255, 0), white)
+          height 24px
+          width 40px
+          position absolute
+          right $cardpad

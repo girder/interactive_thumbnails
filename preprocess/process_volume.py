@@ -20,7 +20,7 @@ DEFAULT_HEIGHT = 512
 
 # Unfortunately this hack is necessary to get the libOSMesa symbols loaded into
 # the global namespace, presumably because they are weakly linked by VTK
-ctypes.CDLL('libOSMesa.so', ctypes.RTLD_GLOBAL)
+#ctypes.CDLL('libOSMesa.so', ctypes.RTLD_GLOBAL)
 
 
 def arc_samples(n_samples):
@@ -33,8 +33,8 @@ def arc_samples(n_samples):
 @click.argument('out_dir', type=click.Path(file_okay=False))
 @click.option('--width', default=DEFAULT_WIDTH, help='output image width (px)')
 @click.option('--height', default=DEFAULT_HEIGHT, help='output image height (px)')
-@click.option('--phi-samples', default=8, help='number of samples in phi dimension')
-@click.option('--theta-samples', default=1, help='number of samples in theta dimension')
+@click.option('--phi-samples', default=4, help='number of samples in phi dimension')
+@click.option('--theta-samples', default=3, help='number of samples in theta dimension')
 @click.version_option(version=__version__, prog_name='Process a volume image into a 3d thumbnail')
 def process(in_file, out_dir, width, height, phi_samples, theta_samples):
     phi_vals = arc_samples(phi_samples)
@@ -55,7 +55,7 @@ def process(in_file, out_dir, width, height, phi_samples, theta_samples):
 
     scalar_opacity = vtkPiecewiseFunction()
     scalar_opacity.RemoveAllPoints()
-    scalar_opacity.AddPoint(field_range[0], 0.)
+    scalar_opacity.AddPoint(field_range[0], 1.)
     scalar_opacity.AddPoint(field_range[1], 1.)
 
     volume_property = vtkVolumeProperty()
@@ -83,14 +83,16 @@ def process(in_file, out_dir, width, height, phi_samples, theta_samples):
     renderer.ResetCamera()
     window.Render()
 
-    # Camera setting
-    # camera = {
-    #     'position': [-0.508, -872.745, 5.1],
-    #     'focalPoint': [-0.508, -32.108, 5.1],
-    #     'viewUp': [0,0,1]
-    # }
-
-    # update_camera(renderer, camera)
+    camera = {
+        'position': [v for v in camera.GetFocalPoint()],
+        'focalPoint': camera.GetFocalPoint(),
+        'viewUp': [1, 0, 0]
+    }
+    camera['position'][2] += 100
+    update_camera(renderer, camera)
+    window.Render()
+    renderer.ResetCamera()
+    window.Render()
 
     idb = ImageDataSetBuilder(out_dir, 'image/jpg', {
         'type': 'spherical',

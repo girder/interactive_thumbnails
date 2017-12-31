@@ -1,4 +1,4 @@
-name: 3D Thumbnails
+name: Interactive thumbnails
 dependencies:
   - worker
 npm:
