@@ -12,7 +12,7 @@ const ViewerWidget = View.extend({
     initialize: function (settings) {
         this._indexJson = settings.indexJson || null;
         this._awaitRender = false;
-        this._basePath =  `item/${this.model.id}/interactive_thumbnail/`;
+        this._basePath = `item/${this.model.id}/interactive_thumbnail/`;
     },
 
     render: function () {

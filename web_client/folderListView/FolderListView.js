@@ -1,5 +1,6 @@
 import _ from 'underscore';
 import View from 'girder/views/View';
+import PaginateWidget from 'girder/views/widgets/PaginateWidget';
 
 import ViewerWidget from '../viewer/ViewerWidget';
 import template from './folderListView.pug';
@@ -10,6 +11,14 @@ const FolderListView = View.extend({
         this.folder = settings.folder;
         this.items = settings.items;
         this._viewers = [];
+        this._pager = new PaginateWidget({
+            parentView: this,
+            collection: this.items
+        });
+
+        this.listenTo(this.items, 'g:changed', () => {
+            this.render();
+        });
     },
 
     render: function () {
@@ -26,6 +35,8 @@ const FolderListView = View.extend({
                 parentView: this
             }).render();
         });
+
+        this._pager.setElement(this.$('.g-paginate-container')).render();
     },
 
     _cleanupViewers: function () {

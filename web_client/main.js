@@ -11,6 +11,9 @@ router.route('folder/:id/interactive_thumbnails', (id) => {
     const folder = new FolderModel({
         _id: id
     });
+
+    items.pageLimit = 30;  // Choose page size with nice divisors for flow layout
+
     $.when(folder.fetch(), items.fetch({folderId: id})).then(() => {
         events.trigger('g:navigateTo', FolderListView, {
             folder,

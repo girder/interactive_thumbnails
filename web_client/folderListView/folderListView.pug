@@ -17,4 +17,8 @@
         .g-item-title-container(title=item.name())
           = item.name()
           span.g-text-fade
-        .g-actions-button
+        a.g-actions-button.btn.btn-sm.btn-default(href=`#item/${item.id}/vtk_viewer`)
+          i.icon-cubes
+          |  Open in 3D viewer
+
+.g-paginate-container
