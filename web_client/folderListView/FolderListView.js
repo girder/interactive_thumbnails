@@ -24,7 +24,7 @@ const FolderListView = View.extend({
     render: function () {
         this.$el.html(template({
             folder: this.folder,
-            items: this.items.toArray()
+            items: this.items
         }));
 
         this._cleanupViewers();

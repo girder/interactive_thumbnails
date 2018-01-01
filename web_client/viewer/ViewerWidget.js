@@ -26,7 +26,7 @@ const ViewerWidget = View.extend({
 
         const container = this.$('.g-interactive-thumbnail-viewer')[0];
         const queryDataModel = new QueryDataModel(this._indexJson, `${getApiRoot()}/${this._basePath}`);
-        const mouseHandler = new MouseHandler(container);
+        const mouseHandler = new MouseHandler(container, {preventDefault: false});
 
         queryDataModel.onDataChange((data, envelope) => {
             container.innerHTML = '';

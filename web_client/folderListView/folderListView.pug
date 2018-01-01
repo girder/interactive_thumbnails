@@ -7,7 +7,7 @@
 
 .g-interactive-thumbnail-list-container
   ol.g-interactive-thumbnail-list
-    each item in items
+    each item in items.toArray()
       li
         .g-viewer-area
           if item.get('hasInteractiveThumbnail')
@@ -21,4 +21,5 @@
           i.icon-cubes
           |  Open in 3D viewer
 
+.g-page-info-container Showing #{items.length && (items.offset - items.length + 1)} - #{items.offset} of #{folder.get('nItems')} items
 .g-paginate-container
