@@ -23,17 +23,7 @@ const ViewerWidget = View.extend({
         }
 
         this.$el.html(template());
-
-        const container = this.$('.g-interactive-thumbnail-viewer')[0];
-        const queryDataModel = new QueryDataModel(this._indexJson, `${getApiRoot()}/${this._basePath}`);
-        const mouseHandler = new MouseHandler(container, {preventDefault: false});
-
-        queryDataModel.onDataChange((data, envelope) => {
-            container.innerHTML = '';
-            container.appendChild(data.image.image);
-        });
-        queryDataModel.fetchData();
-        mouseHandler.attach(queryDataModel.getMouseListener());
+        this._initPvwViewer(this.$('.g-interactive-thumbnail-viewer')[0]);
 
         return this;
     },
@@ -48,9 +38,34 @@ const ViewerWidget = View.extend({
                 this.render();
             }
         });
-    }
+    },
 
-    // TODO(zachmullen) do we need to implement destructor?
+    _initPvwViewer: function (container) {
+        this._cleanupPvwViewer();
+        this._qdm = new QueryDataModel(this._indexJson, `${getApiRoot()}/${this._basePath}`);
+        this._qdm.onDataChange((data, envelope) => {
+            container.innerHTML = '';
+            container.appendChild(data.image.image);
+        });
+        this._mouseHandler = new MouseHandler(container, {preventDefault: false});
+        this._qdm.fetchData();
+        this._mouseHandler.attach(this._qdm.getMouseListener());
+    },
+
+    _cleanupPvwViewer: function () {
+        if (this._mouseHandler) {
+            this._mouseHandler.destroy();
+        }
+        if (this._qdm) {
+            this._qdm.destroy();
+        }
+
+    },
+
+    destroy: function () {
+        this._cleanupPvwViewer();
+        View.prototype.destroy.apply(this, arguments);
+    }
 });
 
 export default ViewerWidget;
