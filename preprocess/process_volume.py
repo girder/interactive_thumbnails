@@ -8,11 +8,7 @@
 
 import click
 import ctypes
-from vtk import (
-    vtkMetaImageReader, vtkGPUVolumeRayCastMapper, vtkColorTransferFunction, vtkPiecewiseFunction,
-    vtkVolumeProperty, vtkVolume, vtkRenderWindow, vtkRenderer, vtkCamera, VTK_LINEAR_INTERPOLATION)
-
-from vtk.web.dataset_builder import ImageDataSetBuilder, update_camera
+import os
 
 __version__ = '0.1.0'
 DEFAULT_WIDTH = 512
@@ -20,7 +16,7 @@ DEFAULT_HEIGHT = 512
 
 # Unfortunately this hack is necessary to get the libOSMesa symbols loaded into
 # the global namespace, presumably because they are weakly linked by VTK
-#ctypes.CDLL('libOSMesa.so', ctypes.RTLD_GLOBAL)
+ctypes.CDLL('libOSMesa.so', ctypes.RTLD_GLOBAL)
 
 
 def arc_samples(n_samples):
@@ -37,29 +33,42 @@ def arc_samples(n_samples):
 @click.option('--theta-samples', default=3, help='number of samples in theta dimension')
 @click.version_option(version=__version__, prog_name='Process a volume image into a 3d thumbnail')
 def process(in_file, out_dir, width, height, phi_samples, theta_samples):
+    # Importing vtk package can be quite slow, only do it if CLI validation passes
+    from vtk import (
+        vtkMetaImageReader, vtkGPUVolumeRayCastMapper, vtkColorTransferFunction,
+        vtkPiecewiseFunction, vtkNrrdReader, vtkVolumeProperty, vtkVolume, vtkRenderWindow,
+        vtkRenderer, vtkCamera, VTK_LINEAR_INTERPOLATION)
+
+    from vtk.web.dataset_builder import ImageDataSetBuilder, update_camera
+
     phi_vals = arc_samples(phi_samples)
     theta_vals = arc_samples(theta_samples)
 
-    reader = vtkMetaImageReader()
+    ext = os.path.splitext(in_file)[1].lower()
+    if ext == '.mha':
+        reader = vtkMetaImageReader()
+    elif ext == '.nrrd':
+        reader = vtkNrrdReader()
+    else:
+        raise Exception('Unknown file type, cannot read: ' + in_file)
+
     reader.SetFileName(in_file)
     reader.Update()
     field_range = reader.GetOutput().GetPointData().GetScalars().GetRange()
 
     mapper = vtkGPUVolumeRayCastMapper()
     mapper.SetInputConnection(reader.GetOutputPort())
-    mapper.RenderToImageOn()
 
     color_function = vtkColorTransferFunction()
-    color_function.AddRGBPoint(field_range[0], 1., 1., 1.)
+    color_function.AddRGBPoint(field_range[0], 0., 0., 0.)
     color_function.AddRGBPoint(field_range[1], 1., 1., 1.)
 
     scalar_opacity = vtkPiecewiseFunction()
-    scalar_opacity.RemoveAllPoints()
-    scalar_opacity.AddPoint(field_range[0], 1.)
+    scalar_opacity.AddPoint(field_range[0], 0.)
     scalar_opacity.AddPoint(field_range[1], 1.)
 
     volume_property = vtkVolumeProperty()
-    volume_property.ShadeOn()
+    #volume_property.ShadeOn()  # TODO(zachmullen) I thought it looked better off, should it be on?
     volume_property.SetInterpolationType(VTK_LINEAR_INTERPOLATION)
     volume_property.SetColor(color_function)
     volume_property.SetScalarOpacity(scalar_opacity)
@@ -78,19 +87,6 @@ def process(in_file, out_dir, width, height, phi_samples, theta_samples):
 
     camera = vtkCamera()
     renderer.SetActiveCamera(camera)
-
-    window.Render()
-    renderer.ResetCamera()
-    window.Render()
-
-    camera = {
-        'position': [v for v in camera.GetFocalPoint()],
-        'focalPoint': camera.GetFocalPoint(),
-        'viewUp': [1, 0, 0]
-    }
-    camera['position'][2] += 100
-    update_camera(renderer, camera)
-    window.Render()
     renderer.ResetCamera()
     window.Render()
 
