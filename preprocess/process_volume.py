@@ -39,7 +39,7 @@ def process(in_file, out_dir, width, height, phi_samples, theta_samples):
         vtkPiecewiseFunction, vtkNrrdReader, vtkVolumeProperty, vtkVolume, vtkRenderWindow,
         vtkRenderer, vtkCamera, VTK_LINEAR_INTERPOLATION)
 
-    from vtk.web.dataset_builder import ImageDataSetBuilder, update_camera
+    from vtk.web.dataset_builder import ImageDataSetBuilder
 
     phi_vals = arc_samples(phi_samples)
     theta_vals = arc_samples(theta_samples)
