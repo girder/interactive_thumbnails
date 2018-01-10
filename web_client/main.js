@@ -1,10 +1,13 @@
 import $ from 'jQuery';
 import events from 'girder/events';
 import FolderModel from 'girder/models/FolderModel';
+import HierarchyWidget from 'girder/views/widgets/HierarchyWidget';
 import ItemCollection from 'girder/collections/ItemCollection';
 import router from 'girder/router';
+import { wrap } from 'girder/utilities/PluginUtils'
 
 import FolderListView from './folderListView/FolderListView';
+import folderActionsExt from './folderActionsExt.pug';
 
 router.route('folder/:id/interactive_thumbnails', (id) => {
     const items = new ItemCollection();
@@ -20,4 +23,16 @@ router.route('folder/:id/interactive_thumbnails', (id) => {
             items
         }, {renderNow: true});
     });
+});
+
+// Add menu item to folder actions dropdown
+wrap(HierarchyWidget, 'render', function (render) {
+    render.call(this);
+
+    if (this.parentModel.resourceName === 'folder') {
+        $(folderActionsExt({
+            folder: this.parentModel
+        })).insertAfter(this.$('.g-folder-actions-menu > li:first'));
+    }
+    return this;
 });
