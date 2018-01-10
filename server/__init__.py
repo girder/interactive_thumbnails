@@ -10,8 +10,8 @@ from girder.models.token import Token
 from girder.plugins.jobs.models.job import Job
 from girder.plugins.worker.utils import girderInputSpec, girderOutputSpec, jobInfoSpec
 
-_PHI_SAMPLES = 8
-_THETA_SAMPLES = 5
+_PHI_SAMPLES = 6
+_THETA_SAMPLES = 12
 _SIZE = 256
 _CREATE_TASK = {
     'mode': 'docker',
@@ -93,6 +93,10 @@ def _getThumbnail(item, uid):
     .modelParam('id', model=Item, level=AccessType.WRITE)
 )
 def _createThumbnail(item):
+    files = Item().childFiles(item, limit=2)
+    if files.count() != 1:
+        raise Exception('Can only generate thumbnails for items containing one file.')
+
     # Remove previously attached thumbnails
     _removeThumbnails(item, saveItem=True)
 
@@ -108,7 +112,7 @@ def _createThumbnail(item):
     job['kwargs'] = {
         'task': _CREATE_TASK,
         'inputs': {
-            'in': girderInputSpec(item, 'item', token=token)
+            'in': girderInputSpec(files[0], 'file', token=token)
         },
         'outputs': {
             'out': girderOutputSpec(
