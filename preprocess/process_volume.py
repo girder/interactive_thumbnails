@@ -97,6 +97,11 @@ def process(in_file, out_dir, width, height, phi_samples, theta_samples):
     })
 
     idb.start(window, renderer)
+
+    # (zachmullen) Bit of a hack to get theta dimension to loop.
+    # See https://gitlab.kitware.com/vtk/vtk/issues/17216
+    idb.getDataHandler().arguments['theta']['loop'] = 'modulo'
+
     idb.writeImages()
     idb.stop()
 
