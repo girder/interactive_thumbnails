@@ -1,4 +1,5 @@
 import _ from 'underscore';
+import { getApiRoot } from 'girder/rest';
 import View from 'girder/views/View';
 import PaginateWidget from 'girder/views/widgets/PaginateWidget';
 
@@ -19,12 +20,16 @@ const FolderListView = View.extend({
         this.listenTo(this.items, 'g:changed', () => {
             this.render();
         });
+
+        // TODO something in scheme to indicate http vs https
+        this._pvDesktopUri = `paraview+girder://${window.location.host}/${getApiRoot()}`;
     },
 
     render: function () {
         this.$el.html(template({
             folder: this.folder,
-            items: this.items
+            items: this.items,
+            pvDesktopUri: this._pvDesktopUri
         }));
 
         this._cleanupViewers();

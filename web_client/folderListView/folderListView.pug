@@ -17,9 +17,16 @@
         .g-item-title-container(title=item.name())
           = item.name()
           span.g-text-fade
-        a.g-actions-button.btn.btn-sm.btn-default(href=`#item/${item.id}/vtk_viewer`)
-          i.icon-cubes
-          |  Open in 3D viewer
+        .g-dropdown-menu-container
+          .btn-group
+            button.btn.btn-default.dropdown-toggle(data-toggle="dropdown")
+              | Actions
+              i.icon-down-dir
+            ul.dropdown-menu(role="menu")
+              li(role="presentation")
+                a(role="menuitem", href=`#item/${item.id}/pv_glance`) Open with ParaView Glance
+              li(role="presentation")
+                a(role="menuitem", href=`${pvDesktopUri}?itemId=${item.id}`) Open with ParaView Desktop
 
 .g-page-info-container Showing #{items.length && (items.offset - items.length + 1)} - #{items.offset} of #{folder.get('nItems')} items
 .g-paginate-container
