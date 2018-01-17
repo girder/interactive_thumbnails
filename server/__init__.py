@@ -9,6 +9,11 @@ from girder.models.item import Item
 from girder.models.token import Token
 from girder.plugins.jobs.models.job import Job
 from girder.plugins.worker.utils import girderInputSpec, girderOutputSpec, jobInfoSpec
+from girder_worker.docker.tasks import docker_run
+from girder_worker.docker.transforms import VolumePath
+from girder_worker.docker.transforms.girder import (
+    GirderFileIdToVolume, GirderUploadVolumePathToItem)
+
 
 _PHI_SAMPLES = 12
 _THETA_SAMPLES = 3
@@ -91,8 +96,10 @@ def _getThumbnail(item, uid):
 @autoDescribeRoute(
     Description('Generate a new set of interactive thumbnail images for an item.')
     .modelParam('id', model=Item, level=AccessType.WRITE)
+    .param('preset', 'Volume rendering transfer function preset to use.',
+           default='default', enum=('default', 'CT-AAA', 'CT-Bones', 'CT-Soft-Tissue'))
 )
-def _createThumbnail(item):
+def _createThumbnail(item, preset):
     files = Item().childFiles(item, limit=2)
     if files.count() != 1:
         raise Exception('Can only generate thumbnails for items containing one file.')
@@ -108,6 +115,17 @@ def _createThumbnail(item):
         title='Interactive thumbnail creation: %s' % item['name'], type='interactive_thumbnails',
         handler='worker_handler', user=user)
     token = Token().createToken(user, days=3, scope={TokenScope.DATA_READ, TokenScope.DATA_WRITE})
+
+    """outdir = VolumePath('__thumbnails_output__')
+    return docker_run.delay('zachmullen/3d_thumbnails:latest', container_args=[
+        '--phi-samples', str(_PHI_SAMPLES),
+        '--theta-samples', str(_THETA_SAMPLES),
+        '--width', str(_SIZE),
+        '--height', str(_SIZE),
+        '--preset', preset,
+        GirderFileIdToVolume(str(files[0]['_id'])),
+        outdir
+    ], girder_result_hooks=[GirderUploadVolumePathToItem(outdir, item['_id'])]).job"""
 
     job['kwargs'] = {
         'task': _CREATE_TASK,

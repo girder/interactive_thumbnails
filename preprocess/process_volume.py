@@ -72,12 +72,19 @@ MEDICAL_XFER_PRESETS = {
     }
 }
 
-def arc_samples(n_samples, sample_range=360., start=0.):
-    step = sample_range / n_samples
-    return [start + step * i for i in range(n_samples)]
+def get_phi_vals(n_samples):
+    step = 360. / n_samples
+    return [step * i for i in range(n_samples)]
+
+def get_theta_vals(n_samples):
+    if n_samples == 1:
+        return [0.]
+
+    step = 180. / (n_samples - 1)
+    return [step * i - 90. for i in range(n_samples)]
 
 
-def build_xfer_fns(color_fn, opacity_fn, volume_property, data):
+def setup_vr(color_fn, opacity_fn, volume_property, data):
     if 'rgba' in data:
         for pt in data['rgba']:
             color_fn.AddRGBPoint(*pt[:4])
@@ -102,9 +109,9 @@ def build_xfer_fns(color_fn, opacity_fn, volume_property, data):
 @click.option('--height', default=DEFAULT_HEIGHT, help='output image height (px)')
 @click.option('--phi-samples', default=12, help='number of samples in phi dimension')
 @click.option('--theta-samples', default=3, help='number of samples in theta dimension')
-@click.option('--xfer-preset', default=None, help='transfer function preset to use')
+@click.option('--preset', default=None, help='transfer function preset to use')
 @click.version_option(version=__version__, prog_name='Process a volume image into a 3d thumbnail')
-def process(in_file, out_dir, width, height, phi_samples, theta_samples, xfer_preset):
+def process(in_file, out_dir, width, height, phi_samples, theta_samples, preset):
     # Importing vtk package can be quite slow, only do it if CLI validation passes
     from vtk import (
         vtkMetaImageReader, vtkGPUVolumeRayCastMapper, vtkColorTransferFunction,
@@ -113,12 +120,8 @@ def process(in_file, out_dir, width, height, phi_samples, theta_samples, xfer_pr
 
     from vtk.web.dataset_builder import ImageDataSetBuilder
 
-    phi_vals = arc_samples(phi_samples)
-
-    if theta_samples > 1:
-        theta_vals = arc_samples(theta_samples, 180., -90.)
-    else:
-        theta_vals = [0.]
+    phi_vals = get_phi_vals(phi_samples)
+    theta_vals = get_theta_vals(theta_samples)
 
     ext = os.path.splitext(in_file)[1].lower()
     if ext == '.mha':
@@ -139,16 +142,15 @@ def process(in_file, out_dir, width, height, phi_samples, theta_samples, xfer_pr
     scalar_opacity = vtkPiecewiseFunction()
     volume_property = vtkVolumeProperty()
 
-    if xfer_preset is None:  # some sensible naive default
+    if preset is None:  # some sensible naive default
         color_function.AddRGBPoint(field_range[0], 0., 0., 0.)
         color_function.AddRGBPoint(field_range[1], 1., 1., 1.)
         scalar_opacity.AddPoint(field_range[0], 0.)
         scalar_opacity.AddPoint(field_range[1], 1.)
-    elif xfer_preset in MEDICAL_XFER_PRESETS:
-        build_xfer_fns(
-            color_function, scalar_opacity, volume_property, MEDICAL_XFER_PRESETS[xfer_preset])
+    elif preset in MEDICAL_XFER_PRESETS:
+        setup_vr(color_function, scalar_opacity, volume_property, MEDICAL_XFER_PRESETS[preset])
     else:
-        raise Exception('Unknown transfer function preset: %s' % xfer_preset)
+        raise Exception('Unknown transfer function preset: %s' % preset)
 
 
     volume_property.SetInterpolationType(VTK_LINEAR_INTERPOLATION)
