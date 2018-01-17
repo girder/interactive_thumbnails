@@ -142,7 +142,7 @@ def process(in_file, out_dir, width, height, phi_samples, theta_samples, preset)
     scalar_opacity = vtkPiecewiseFunction()
     volume_property = vtkVolumeProperty()
 
-    if preset is None:  # some sensible naive default
+    if preset is None or preset == 'default':  # some sensible naive default
         color_function.AddRGBPoint(field_range[0], 0., 0., 0.)
         color_function.AddRGBPoint(field_range[1], 1., 1., 1.)
         scalar_opacity.AddPoint(field_range[0], 0.)
