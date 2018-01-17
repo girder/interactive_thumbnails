@@ -2,13 +2,11 @@ import json
 from girder import events
 from girder.api import access
 from girder.api.describe import autoDescribeRoute, Description
-from girder.api.rest import filtermodel, getCurrentUser, RestException
+from girder.api.rest import filtermodel, RestException
 from girder.constants import AccessType, TokenScope
 from girder.models.file import File
 from girder.models.item import Item
-from girder.models.token import Token
 from girder.plugins.jobs.models.job import Job
-from girder.plugins.worker.utils import girderInputSpec, girderOutputSpec, jobInfoSpec
 from girder_worker.docker.tasks import docker_run
 from girder_worker.docker.transforms import VolumePath
 from girder_worker.docker.transforms.girder import (
@@ -107,43 +105,18 @@ def _createThumbnail(item, preset):
     # Remove previously attached thumbnails
     _removeThumbnails(item, saveItem=True)
 
-    user = getCurrentUser()
-
-    # Schedule a job to produce new thumbnails
-    jm = Job()
-    job = jm.createJob(
-        title='Interactive thumbnail creation: %s' % item['name'], type='interactive_thumbnails',
-        handler='worker_handler', user=user)
-    token = Token().createToken(user, days=3, scope={TokenScope.DATA_READ, TokenScope.DATA_WRITE})
-
-    """outdir = VolumePath('__thumbnails_output__')
-    return docker_run.delay('zachmullen/3d_thumbnails:latest', container_args=[
-        '--phi-samples', str(_PHI_SAMPLES),
-        '--theta-samples', str(_THETA_SAMPLES),
-        '--width', str(_SIZE),
-        '--height', str(_SIZE),
-        '--preset', preset,
-        GirderFileIdToVolume(str(files[0]['_id'])),
-        outdir
-    ], girder_result_hooks=[GirderUploadVolumePathToItem(outdir, item['_id'])]).job"""
-
-    job['kwargs'] = {
-        'task': _CREATE_TASK,
-        'inputs': {
-            'in': girderInputSpec(files[0], 'file', token=token)
-        },
-        'outputs': {
-            'out': girderOutputSpec(
-                item, token=token, parentType='item', reference=json.dumps({
-                    'interactive_thumbnail': True
-                }), name='__interactive_thumbnail__')
-        },
-        'jobInfo': jobInfoSpec(job)
-    }
-    job = jm.save(job)
-    jm.scheduleJob(job)
-
-    return job
+    outdir = VolumePath('__thumbnails_output__')
+    return docker_run.delay(
+        'zachmullen/3d_thumbnails:latest', container_args=[
+            '--phi-samples', str(_PHI_SAMPLES),
+            '--theta-samples', str(_THETA_SAMPLES),
+            '--width', str(_SIZE),
+            '--height', str(_SIZE),
+            '--preset', preset,
+            GirderFileIdToVolume(str(files[0]['_id'])),
+            outdir
+        ], girder_job_title='Interactive thumbnail generation: %s' % item['name'],
+        girder_result_hooks=[GirderUploadVolumePathToItem(outdir, item['_id'])]).job
 
 
 def load(info):
