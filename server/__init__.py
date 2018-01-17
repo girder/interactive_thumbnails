@@ -10,8 +10,8 @@ from girder.models.token import Token
 from girder.plugins.jobs.models.job import Job
 from girder.plugins.worker.utils import girderInputSpec, girderOutputSpec, jobInfoSpec
 
-_PHI_SAMPLES = 6
-_THETA_SAMPLES = 12
+_PHI_SAMPLES = 12
+_THETA_SAMPLES = 3
 _SIZE = 256
 _CREATE_TASK = {
     'mode': 'docker',

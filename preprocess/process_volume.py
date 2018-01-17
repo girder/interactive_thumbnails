@@ -19,9 +19,9 @@ DEFAULT_HEIGHT = 512
 ctypes.CDLL('libOSMesa.so', ctypes.RTLD_GLOBAL)
 
 
-def arc_samples(n_samples):
-    step = 360. / n_samples
-    return [step * i for i in range(n_samples)]
+def arc_samples(n_samples, sample_range=360., start=0.):
+    step = sample_range / n_samples
+    return [start + step * i for i in range(n_samples)]
 
 
 @click.command()
@@ -29,7 +29,7 @@ def arc_samples(n_samples):
 @click.argument('out_dir', type=click.Path(file_okay=False))
 @click.option('--width', default=DEFAULT_WIDTH, help='output image width (px)')
 @click.option('--height', default=DEFAULT_HEIGHT, help='output image height (px)')
-@click.option('--phi-samples', default=4, help='number of samples in phi dimension')
+@click.option('--phi-samples', default=12, help='number of samples in phi dimension')
 @click.option('--theta-samples', default=3, help='number of samples in theta dimension')
 @click.version_option(version=__version__, prog_name='Process a volume image into a 3d thumbnail')
 def process(in_file, out_dir, width, height, phi_samples, theta_samples):
@@ -42,7 +42,11 @@ def process(in_file, out_dir, width, height, phi_samples, theta_samples):
     from vtk.web.dataset_builder import ImageDataSetBuilder
 
     phi_vals = arc_samples(phi_samples)
-    theta_vals = arc_samples(theta_samples)
+
+    if theta_samples > 1:
+        theta_vals = arc_samples(theta_samples, 180., -90.)
+    else:
+        theta_vals = [0.]
 
     ext = os.path.splitext(in_file)[1].lower()
     if ext == '.mha':
@@ -97,10 +101,6 @@ def process(in_file, out_dir, width, height, phi_samples, theta_samples):
     })
 
     idb.start(window, renderer)
-
-    # (zachmullen) Bit of a hack to get theta dimension to loop.
-    # See https://gitlab.kitware.com/vtk/vtk/issues/17216
-    idb.getDataHandler().arguments['theta']['loop'] = 'modulo'
 
     idb.writeImages()
     idb.stop()
