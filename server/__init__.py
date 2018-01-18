@@ -12,29 +12,9 @@ from girder_worker.docker.transforms import VolumePath
 from girder_worker.docker.transforms.girder import (
     GirderFileIdToVolume, GirderUploadVolumePathToItem)
 
-
 _PHI_SAMPLES = 12
 _THETA_SAMPLES = 3
 _SIZE = 256
-_CREATE_TASK = {
-    'mode': 'docker',
-    'docker_image': 'zachmullen/3d_thumbnails:latest',
-    'container_args': [
-        '--phi-samples', str(_PHI_SAMPLES),
-        '--theta-samples', str(_THETA_SAMPLES),
-        '--width', str(_SIZE),
-        '--height', str(_SIZE),
-        '$input{in}', '$output{out}'
-    ],
-    'inputs': [{
-        'id': 'in',
-        'target': 'filepath'
-    }],
-    'outputs': [{
-        'id': 'out',
-        'target': 'filepath'
-    }]
-}
 
 
 def _handleUpload(event):
