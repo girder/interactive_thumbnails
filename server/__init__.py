@@ -113,10 +113,14 @@ def _createThumbnail(item, preset):
             '--width', str(_SIZE),
             '--height', str(_SIZE),
             '--preset', preset,
-            GirderFileIdToVolume(str(files[0]['_id'])),
+            GirderFileIdToVolume(files[0]['_id']),
             outdir
         ], girder_job_title='Interactive thumbnail generation: %s' % item['name'],
-        girder_result_hooks=[GirderUploadVolumePathToItem(outdir, item['_id'])]).job
+        girder_result_hooks=[
+            GirderUploadVolumePathToItem(outdir, item['_id'], upload_kwargs={
+                'reference': json.dumps({'interactive_thumbnail': True})
+            })
+        ]).job
 
 
 def load(info):
