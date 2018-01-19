@@ -80,8 +80,8 @@ def get_theta_vals(n_samples):
     if n_samples == 1:
         return [0.]
 
-    step = 180. / (n_samples - 1)
-    return [step * i - 90. for i in range(n_samples)]
+    step = 90. / (n_samples - 1)
+    return [step * i + 45. for i in range(n_samples)]
 
 
 def setup_vr(color_fn, opacity_fn, volume_property, data):
