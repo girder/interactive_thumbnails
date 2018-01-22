@@ -128,6 +128,9 @@ def process(in_file, out_dir, width, height, phi_samples, theta_samples, preset)
         reader = vtkMetaImageReader()
     elif ext == '.nrrd':
         reader = vtkNrrdReader()
+    elif ext == '.tre':
+        # TODO refactor this to reduce duplication of visualization code
+        return process_tre(in_file, out_dir, phi_vals, theta_vals, width, height)
     else:
         raise Exception('Unknown file type, cannot read: ' + in_file)
 
@@ -184,6 +187,183 @@ def process(in_file, out_dir, width, height, phi_samples, theta_samples, preset)
 
     idb.writeImages()
     idb.stop()
+
+
+def process_tre(in_file, out_dir, phi_vals, theta_vals, width, height):
+    import itk, vtk
+    from vtk.web.dataset_builder import ImageDataSetBuilder
+
+    reader = itk.SpatialObjectReader[3].New()
+    reader.SetFileName(in_file)
+    reader.Update()
+    blocks = vtk.vtkMultiBlockDataSet()
+    tubeGroup = reader.GetGroup()
+    for tube in _iter_tubes(tubeGroup):
+        polydata = _tube_to_polydata(tube)
+        index = blocks.GetNumberOfBlocks()
+        blocks.SetBlock(index, polydata)
+
+    prod = vtk.vtkTrivialProducer()
+    prod.SetOutput(blocks)
+
+    mapper = vtk.vtkCompositePolyDataMapper2()
+    mapper.SetInputConnection(prod.GetOutputPort())
+
+    cdsa = vtk.vtkCompositeDataDisplayAttributes()
+    cdsa.SetBlockColor(1, (1, 1, 0))
+    cdsa.SetBlockColor(2, (0, 1, 1))
+
+    mapper.SetCompositeDataDisplayAttributes(cdsa)
+
+    window = vtk.vtkRenderWindow()
+    window.SetSize(width, height)
+
+    renderer = vtk.vtkRenderer()
+    window.AddRenderer(renderer)
+
+    actor = vtk.vtkActor()
+    actor.SetMapper(mapper)
+
+    renderer.AddActor(actor)
+    renderer.ResetCamera()
+
+    window.Render()
+
+    idb = ImageDataSetBuilder(out_dir, 'image/jpg', {
+        'type': 'spherical',
+        'phi': phi_vals,
+        'theta': theta_vals
+    })
+
+    idb.start(window, renderer)
+
+    idb.writeImages()
+    idb.stop()
+
+
+def _iter_tubes(tubeGroup):
+    import itk, itkExtras
+
+    obj = itkExtras.down_cast(tubeGroup)
+    if isinstance(obj, itk.VesselTubeSpatialObject[3]):
+        yield obj
+
+    # otherwise, `obj` is a GroupSpatialObject
+    children = obj.GetChildren()
+    for i in range(obj.GetNumberOfChildren()):
+        for tube in _iter_tubes(children[i]):
+            yield tube
+
+
+def _get_tube_points(tube):
+    points = []
+    for j in range(tube.GetNumberOfPoints()):
+        point = _convert_to_vessel_tube(tube.GetPoint(j))
+
+        radius = point.GetRadius()
+        pos = point.GetPosition()
+
+        # I think I need to extract the values otherwise corruption occurs
+        # on the itkPointD3 objects.
+        points.append(((pos[0], pos[1], pos[2]), radius))
+    return points
+
+
+def _convert_to_vessel_tube(soPoint):
+    import itk
+    props = str(soPoint).split('\n')
+    dim = len(soPoint.GetPosition())
+    vesselTubePoint = itk.VesselTubeSpatialObjectPoint[dim]()
+
+    vesselTubePoint.SetID(soPoint.GetID())
+    vesselTubePoint.SetPosition(*soPoint.GetPosition())
+    vesselTubePoint.SetBlue(soPoint.GetBlue())
+    vesselTubePoint.SetGreen(soPoint.GetGreen())
+    vesselTubePoint.SetRed(soPoint.GetRed())
+    vesselTubePoint.SetAlpha(soPoint.GetAlpha())
+
+    radius = float(props[3].strip()[len("R: "):])
+    vesselTubePoint.SetRadius(radius)
+
+    tangent = list(map(float, props[5].strip()[len("T: ["):-1].split(",")))
+    vesselTubePoint.SetTangent(*tangent)
+
+    normal1 = list(map(float, props[6].strip()[len("Normal1: ["):-1].split(",")))
+    normal2 = list(map(float, props[7].strip()[len("Normal2: ["):-1].split(",")))
+    vesselTubePoint.SetNormal1(*normal1)
+    vesselTubePoint.SetNormal2(*normal2)
+
+    medialness = float(props[8].strip()[len("Medialness: "):])
+    vesselTubePoint.SetMedialness(medialness)
+
+    ridgeness = float(props[9].strip()[len("Ridgeness: "):])
+    vesselTubePoint.SetRidgeness(ridgeness)
+
+    alpha1 = float(props[10].strip()[len("Alpha1: "):])
+    alpha2 = float(props[11].strip()[len("Alpha2: "):])
+    alpha3 = float(props[12].strip()[len("Alpha3: "):])
+    vesselTubePoint.SetAlpha1(alpha1)
+    vesselTubePoint.SetAlpha2(alpha2)
+    vesselTubePoint.SetAlpha3(alpha3)
+
+    mark = float(props[13].strip()[len("Mark: "):])
+    vesselTubePoint.SetMark(bool(mark))
+
+    return vesselTubePoint
+
+
+def _tube_to_polydata(tube):
+    import vtk
+    points = _get_tube_points(tube)
+
+    # Convert points to world space.
+    tube.ComputeObjectToWorldTransform()
+    transform = tube.GetIndexToWorldTransform()
+    # Get scaling vector from transform matrix diagonal.
+    scaling = [transform.GetMatrix()(i,i) for i in range(3)]
+    # Use average of scaling vector for scale since TubeFilter
+    # doesn't seem to support ellipsoid.
+    scale = sum(scaling)/len(scaling)
+    for i in range(len(points)):
+        pt, radius = points[i]
+        pt = transform.TransformPoint(pt)
+        points[i] = (pt, radius*scale)
+
+    vpoints = vtk.vtkPoints()
+    vpoints.SetNumberOfPoints(len(points))
+    scalars = vtk.vtkFloatArray()
+    scalars.SetNumberOfValues(len(points))
+    scalars.SetName('Radii')
+
+    minRadius = float('inf')
+    maxRadius = float('-inf')
+    for i, (pt, r) in enumerate(points):
+        vpoints.SetPoint(i, pt)
+        scalars.SetValue(i, r)
+        minRadius = min(r, minRadius)
+        maxRadius = max(r, maxRadius)
+
+    pl = vtk.vtkPolyLine()
+    pl.Initialize(len(points), range(len(points)), vpoints)
+
+    ca = vtk.vtkCellArray()
+    ca.InsertNextCell(pl)
+
+    pd = vtk.vtkPolyData()
+    pd.SetLines(ca)
+    pd.SetPoints(vpoints)
+    pd.GetPointData().SetScalars(scalars)
+    pd.GetPointData().SetActiveScalars('Radii')
+
+    tf = vtk.vtkTubeFilter()
+    tf.SetInputData(pd)
+    tf.SetVaryRadiusToVaryRadiusByAbsoluteScalar()
+    tf.SetRadius(minRadius)
+    tf.SetRadiusFactor(maxRadius/minRadius)
+    tf.SetNumberOfSides(20)
+    tf.Update()
+
+    return tf.GetOutput()
 
 
 if __name__ == '__main__':
