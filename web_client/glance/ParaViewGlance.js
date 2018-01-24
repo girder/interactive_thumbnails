@@ -1,16 +1,23 @@
 import View from 'girder/views/View';
-import React from 'react';
-import ReactDOM from 'react-dom';
 
-import GlanceMain from 'pv-web-viewer/Sources/MainView';
+import Glance from 'pv-web-viewer/dist/embeddable';
 import template from './paraviewGlance.pug';
 
 const ParaViewGlanceView = View.extend({
     render: function () {
         this.$el.html(template());
 
-        ReactDOM.render(<GlanceMain />, this.$('.g-pv-glance-container')[0]);
+        // It would be great if this API existed
+        this.glance = new Glance({
+            container: this.$('.g-pv-glance-container')[0],
+            dataUrl: this.model.getDownloadUrl()
+        });
+
         return this;
+    },
+
+    destroy: function () {
+        this.glance.destroy();
     }
 });
 
