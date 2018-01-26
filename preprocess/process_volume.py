@@ -72,9 +72,11 @@ MEDICAL_XFER_PRESETS = {
     }
 }
 
+
 def get_phi_vals(n_samples):
     step = 360. / n_samples
     return [step * i for i in range(n_samples)]
+
 
 def get_theta_vals(n_samples):
     if n_samples == 1:
@@ -116,7 +118,7 @@ def process(in_file, out_dir, width, height, phi_samples, theta_samples, preset)
     from vtk import (
         vtkMetaImageReader, vtkGPUVolumeRayCastMapper, vtkColorTransferFunction,
         vtkPiecewiseFunction, vtkNrrdReader, vtkVolumeProperty, vtkVolume, vtkRenderWindow,
-        vtkRenderer, vtkCamera, VTK_LINEAR_INTERPOLATION)
+        vtkRenderer, vtkCamera, vtkXMLImageDataReader, VTK_LINEAR_INTERPOLATION)
 
     from vtk.web.dataset_builder import ImageDataSetBuilder
 
@@ -128,6 +130,8 @@ def process(in_file, out_dir, width, height, phi_samples, theta_samples, preset)
         reader = vtkMetaImageReader()
     elif ext == '.nrrd':
         reader = vtkNrrdReader()
+    elif ext == '.vti':
+        reader = vtkXMLImageDataReader()
     elif ext == '.tre':
         # TODO refactor this to reduce duplication of visualization code
         return process_tre(in_file, out_dir, phi_vals, theta_vals, width, height)
