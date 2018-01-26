@@ -7,4 +7,4 @@ npm:
     mout: 1.0.0  # mout, monologue, and hammer are internal dependencies of paraviewweb
     monologue.js: 0.3.5
     hammerjs: 2.0.8
-    pv-glance-embeddable: 0.8.0
+    paraview-glance: 1.0.1
