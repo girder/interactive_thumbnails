@@ -1,4 +1,4 @@
-import $ from 'jQuery';
+import $ from 'jquery';
 import { Layout } from 'girder/constants';
 import events from 'girder/events';
 import FolderModel from 'girder/models/FolderModel';
