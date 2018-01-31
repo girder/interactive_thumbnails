@@ -1,0 +1,2 @@
+girder-worker==0.4.1
+girder-worker-utils==0.8.0
