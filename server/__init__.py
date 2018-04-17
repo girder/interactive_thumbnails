@@ -13,7 +13,7 @@ from girder_worker.docker.transforms.girder import (
     GirderFileIdToVolume, GirderUploadVolumePathToItem)
 
 _PHI_SAMPLES = 12
-_THETA_SAMPLES = 3
+_THETA_SAMPLES = 6
 _SIZE = 256
 
 

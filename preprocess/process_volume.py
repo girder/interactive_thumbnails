@@ -82,8 +82,8 @@ def get_theta_vals(n_samples):
     if n_samples == 1:
         return [0.]
 
-    step = 90. / (n_samples - 1)
-    return [step * i + 45. for i in range(n_samples)]
+    step = 160. / (n_samples - 1)
+    return [step * i - 80. for i in range(n_samples)]
 
 
 def setup_vr(color_fn, opacity_fn, volume_property, data):
@@ -110,7 +110,7 @@ def setup_vr(color_fn, opacity_fn, volume_property, data):
 @click.option('--width', default=DEFAULT_WIDTH, help='output image width (px)')
 @click.option('--height', default=DEFAULT_HEIGHT, help='output image height (px)')
 @click.option('--phi-samples', default=12, help='number of samples in phi dimension')
-@click.option('--theta-samples', default=3, help='number of samples in theta dimension')
+@click.option('--theta-samples', default=6, help='number of samples in theta dimension')
 @click.option('--preset', default=None, help='transfer function preset to use')
 @click.version_option(version=__version__, prog_name='Process a volume image into a 3d thumbnail')
 def process(in_file, out_dir, width, height, phi_samples, theta_samples, preset):
