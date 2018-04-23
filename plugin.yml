@@ -3,8 +3,5 @@ dependencies:
   - worker
 npm:
   dependencies:
-    paraviewweb: 2.5.25
-    mout: 1.0.0  # mout, monologue, and hammer are internal dependencies of paraviewweb
-    monologue.js: 0.3.5
-    hammerjs: 2.0.8
+    gl-matrix: 2.5.1
     paraview-glance: 1.1.16
