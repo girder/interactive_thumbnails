@@ -12,8 +12,7 @@ from girder_worker.docker.transforms import VolumePath
 from girder_worker.docker.transforms.girder import (
     GirderFileIdToVolume, GirderUploadVolumePathToItem)
 
-_PHI_SAMPLES = 12
-_THETA_SAMPLES = 6
+_ANGLE_STEP = 20
 _SIZE = 256
 
 
@@ -88,8 +87,7 @@ def _createThumbnail(item, preset):
     outdir = VolumePath('__thumbnails_output__')
     return docker_run.delay(
         'zachmullen/3d_thumbnails:latest', container_args=[
-            '--phi-samples', str(_PHI_SAMPLES),
-            '--theta-samples', str(_THETA_SAMPLES),
+            '--angle-step', str(_ANGLE_STEP),
             '--width', str(_SIZE),
             '--height', str(_SIZE),
             '--preset', preset,

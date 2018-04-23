@@ -73,17 +73,12 @@ MEDICAL_XFER_PRESETS = {
 }
 
 
-def get_phi_vals(n_samples):
-    step = 360. / n_samples
-    return [step * i for i in range(n_samples)]
-
-
-def get_theta_vals(n_samples):
-    if n_samples == 1:
-        return [0.]
-
-    step = 160. / (n_samples - 1)
-    return [step * i - 80. for i in range(n_samples)]
+def get_angle_samples(angle_step):
+    phi = list(range(0, 360, angle_step))
+    theta = list(range(-90, 91, angle_step))
+    theta[0] += 1
+    theta[-1] -= 1
+    return phi, theta
 
 
 def setup_vr(color_fn, opacity_fn, volume_property, data):
@@ -109,11 +104,10 @@ def setup_vr(color_fn, opacity_fn, volume_property, data):
 @click.argument('out_dir', type=click.Path(file_okay=False))
 @click.option('--width', default=DEFAULT_WIDTH, help='output image width (px)')
 @click.option('--height', default=DEFAULT_HEIGHT, help='output image height (px)')
-@click.option('--phi-samples', default=12, help='number of samples in phi dimension')
-@click.option('--theta-samples', default=6, help='number of samples in theta dimension')
+@click.option('--angle-step', default=20, help='angle step for sampling (degrees)')
 @click.option('--preset', default=None, help='transfer function preset to use')
 @click.version_option(version=__version__, prog_name='Process a volume image into a 3d thumbnail')
-def process(in_file, out_dir, width, height, phi_samples, theta_samples, preset):
+def process(in_file, out_dir, width, height, angle_step, preset):
     # Importing vtk package can be quite slow, only do it if CLI validation passes
     from vtk import (
         vtkMetaImageReader, vtkGPUVolumeRayCastMapper, vtkColorTransferFunction,
@@ -122,8 +116,7 @@ def process(in_file, out_dir, width, height, phi_samples, theta_samples, preset)
 
     from vtk.web.dataset_builder import ImageDataSetBuilder
 
-    phi_vals = get_phi_vals(phi_samples)
-    theta_vals = get_theta_vals(theta_samples)
+    phi_vals, theta_vals = get_angle_samples(angle_step)
 
     ext = os.path.splitext(in_file)[1].lower()
     if ext == '.mha':
