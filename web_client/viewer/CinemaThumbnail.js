@@ -2,49 +2,6 @@ import { vec3, mat4 } from 'gl-matrix';
 
 // ----------------------------------------------------------------------------
 
-function cross(x, y, out) {
-  const Zx = x[1] * y[2] - x[2] * y[1];
-  const Zy = x[2] * y[0] - x[0] * y[2];
-  const Zz = x[0] * y[1] - x[1] * y[0];
-  out[0] = Zx;
-  out[1] = Zy;
-  out[2] = Zz;
-}
-
-// ----------------------------------------------------------------------------
-
-function dot(x, y) {
-  return x[0] * y[0] + x[1] * y[1] + x[2] * y[2];
-}
-
-// ----------------------------------------------------------------------------
-
-function norm(x) {
-  return Math.sqrt(x[0] * x[0] + x[1] * x[1] + x[2] * x[2]);
-}
-
-// ----------------------------------------------------------------------------
-
-function normalize(x) {
-  const den = norm(x);
-  if (den !== 0.0) {
-    x[0] /= den;
-    x[1] /= den;
-    x[2] /= den;
-  }
-  return den;
-}
-
-// ----------------------------------------------------------------------------
-
-function copy(src, dst) {
-  dst[0] = src[0];
-  dst[1] = src[1];
-  dst[2] = src[2];
-}
-
-// ----------------------------------------------------------------------------
-
 function snap(angle, angleStep) {
   const rest = angle % angleStep;
   if (rest > angleStep * 0.5) {
@@ -69,6 +26,41 @@ function getScreenEventPositionFor(event) {
 
 // ----------------------------------------------------------------------------
 
+function floatToByte(number) {
+  return (number + 1) * 255 * 0.5;
+}
+// ----------------------------------------------------------------------------
+
+function byteToFloat(number) {
+  return number / 255 * 2 - 1;
+}
+
+// ----------------------------------------------------------------------------
+
+function encodeVec3(vector) {
+  return btoa(String.fromCharCode.apply(null, vector.map(floatToByte)));
+}
+
+// ----------------------------------------------------------------------------
+
+function decodeVec3(out, base64) {
+  vec3.normalize(
+    out,
+    atob(base64)
+      .split('')
+      .map((c) => c.charCodeAt(0))
+      .map(byteToFloat)
+  );
+}
+
+// ----------------------------------------------------------------------------
+
+function updateOrientation() {
+  this.style.transform = this.dataset.rotation;
+}
+
+// ----------------------------------------------------------------------------
+
 const trans = new Float64Array(16);
 const v2 = new Float64Array(3);
 const direction = new Float64Array(3);
@@ -83,6 +75,7 @@ export default class CinemaThumbnail {
     this.basepath = basepath;
     this.angleStep = angleStep;
 
+    this.deferRoll = true; // Wait for image loaded before apply roll
     this.epsilon = Math.sin(this.angleStep / 360 * Math.PI);
     this.position = [0, 0, 1];
     this.viewUp = [0, 1, 0];
@@ -106,16 +99,34 @@ export default class CinemaThumbnail {
     this.image = new Image();
     this.image.style.width = '100%';
 
+    if (this.deferRoll) {
+      this.image.onload = updateOrientation;
+    }
+
     this.container.style.overflow = 'hidden';
     this.container.appendChild(this.image);
     this.container.addEventListener('mousemove', this.onMouseMove);
+
+    // Reload state if available
+    this.setState(el.dataset.state);
+
+    this.updateImage();
+  }
+
+  free() {
+    // Add mouse listener
+    this.container.removeEventListener('mousemove', this.onMouseMove);
+    this.container.removeChild(this.image);
+    this.image = null;
+    this.container = null;
+    this.onMouseMove = null;
   }
 
   orthogonalizeViewUp() {
-    cross(this.position, this.viewUp, direction);
-    cross(direction, this.position, this.viewUp);
-    normalize(this.viewUp);
-    normalize(this.position);
+    vec3.cross(direction, this.position, this.viewUp);
+    vec3.cross(this.viewUp, direction, this.position);
+    vec3.normalize(this.viewUp, this.viewUp);
+    vec3.normalize(this.position, this.position);
   }
 
   rotate(x, y, width, height) {
@@ -132,7 +143,7 @@ export default class CinemaThumbnail {
     );
 
     // Elevation
-    cross(this.viewUp, this.position, v2);
+    vec3.cross(v2, this.viewUp, this.position);
     mat4.rotate(
       trans,
       trans,
@@ -147,12 +158,12 @@ export default class CinemaThumbnail {
     direction[2] = this.viewUp[2] + this.position[2];
     vec3.transformMat4(newViewUp, direction, trans);
 
-    copy(newCamPos, this.position);
+    vec3.copy(this.position, newCamPos);
 
     newViewUp[0] -= newCamPos[0];
     newViewUp[1] -= newCamPos[1];
     newViewUp[2] -= newCamPos[2];
-    copy(newViewUp, this.viewUp);
+    vec3.copy(this.viewUp, newViewUp);
     this.orthogonalizeViewUp();
     this.updateImage();
   }
@@ -189,11 +200,11 @@ export default class CinemaThumbnail {
     direction[2] = this.viewUp[2] + this.position[2];
     vec3.transformMat4(newViewUp, direction, trans);
 
-    copy(newCamPos, this.position);
+    vec3.copy(this.position, newCamPos);
     newViewUp[0] -= newCamPos[0];
     newViewUp[1] -= newCamPos[1];
     newViewUp[2] -= newCamPos[2];
-    copy(newViewUp, this.viewUp);
+    vec3.copy(this.viewUp, newViewUp);
     this.orthogonalizeViewUp();
     this.updateImage();
   }
@@ -203,13 +214,13 @@ export default class CinemaThumbnail {
       return;
     }
 
-    copy(this.position, newCamPos);
+    vec3.copy(newCamPos, this.position);
     let theta = snap(
       Math.asin(newCamPos[1]) * 180 / Math.PI + 90,
       this.angleStep
     );
     newCamPos[1] = 0;
-    normalize(newCamPos);
+    vec3.normalize(newCamPos, newCamPos);
     let phi = snap(Math.asin(-newCamPos[0]) * 180 / Math.PI, this.angleStep);
 
     if (newCamPos[2] > -this.epsilon) {
@@ -234,23 +245,42 @@ export default class CinemaThumbnail {
     ];
 
     const originalViewUp = [0, 1, 0];
-    cross(originalViewUp, originalPosition, originalViewUp);
-    cross(originalPosition, originalViewUp, originalViewUp);
-    normalize(originalViewUp);
+    vec3.cross(originalViewUp, originalViewUp, originalPosition);
+    vec3.cross(originalViewUp, originalPosition, originalViewUp);
+    vec3.normalize(originalViewUp, originalViewUp);
 
     const correctedViewUp = [0, 0, 0];
-    cross(this.viewUp, originalPosition, correctedViewUp);
-    cross(originalPosition, correctedViewUp, correctedViewUp);
-    normalize(correctedViewUp);
+    vec3.cross(correctedViewUp, this.viewUp, originalPosition);
+    vec3.cross(correctedViewUp, originalPosition, correctedViewUp);
+    vec3.normalize(correctedViewUp, correctedViewUp);
 
     const crossV = [0, 0, 0];
-    cross(originalViewUp, correctedViewUp, crossV);
-    const sign = Math.sign(dot(crossV, originalPosition));
+    vec3.cross(crossV, originalViewUp, correctedViewUp);
+    const sign = Math.sign(vec3.dot(crossV, originalPosition));
 
-    const cosT = dot(originalViewUp, correctedViewUp);
+    const cosT = vec3.dot(originalViewUp, correctedViewUp);
     const angle = sign * Math.round(Math.acos(cosT) * 180 / Math.PI);
 
     this.image.src = `${this.basepath}/${theta}_${phi}.jpg`;
-    this.image.style.transform = `rotate(${angle}deg)`;
+    if (this.deferRoll) {
+      this.image.dataset.rotation = `rotate(${angle}deg)`;
+    } else {
+      this.image.style.transform = `rotate(${angle}deg)`;
+    }
+
+    this.image.dataset.state = this.getState();
+  }
+
+  getState() {
+    return [encodeVec3(this.position), encodeVec3(this.viewUp)].join('');
+  }
+
+  setState(str) {
+    if (!str) {
+      return;
+    }
+    decodeVec3(this.position, str.substring(0, 4));
+    decodeVec3(this.viewUp, str.substring(4, 8));
+    this.orthogonalizeViewUp();
   }
 }
