@@ -1,7 +1,0 @@
-name: Interactive thumbnails
-dependencies:
-  - worker
-npm:
-  dependencies:
-    gl-matrix: 2.5.1
-    paraview-glance: 1.1.16
