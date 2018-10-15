@@ -6,7 +6,8 @@ from girder.api.rest import filtermodel, RestException
 from girder.constants import AccessType, TokenScope
 from girder.models.file import File
 from girder.models.item import Item
-from girder.plugins.jobs.models.job import Job
+from girder.plugin import getPlugin, GirderPlugin
+from girder_jobs.models.job import Job
 from girder_worker.docker.tasks import docker_run
 from girder_worker.docker.transforms import VolumePath
 from girder_worker.docker.transforms.girder import (
@@ -47,7 +48,10 @@ def _removeThumbnails(item, saveItem=False):
           rm(file)
 
     if saveItem:
-        Item().update({'_id': item['_id']}, {'$set': {'hasInteractiveThumbnail': False}}, multi=False)
+        Item().update(
+            {'_id': item['_id']},
+            {'$set': {'hasInteractiveThumbnail': False}},
+            multi=False)
 
 
 @access.cookie
@@ -101,12 +105,17 @@ def _createThumbnail(item, preset):
         ]).job
 
 
-def load(info):
-    events.bind('model.item.remove', info['name'], lambda e: _removeThumbnails(e.info))
-    events.bind('model.file.finalizeUpload.after', info['name'], _handleUpload)
-    File().ensureIndex(([('interactive_thumbnails_uid', 1), ('attachedToId', 1)], {'sparse': True}))
-    File().exposeFields(level=AccessType.READ, fields={'interactive_thumbnails_info'})
-    Item().exposeFields(level=AccessType.READ, fields={'hasInteractiveThumbnail'})
+class InteractiveThumbnailsPlugin(GirderPlugin):
+    DISPLAY_NAME = 'Interactive thumbnails'
+    CLIENT_SOURCE_PATH = 'web_client'
 
-    info['apiRoot'].item.route('GET', (':id', 'interactive_thumbnail', ':uid'), _getThumbnail)
-    info['apiRoot'].item.route('POST', (':id', 'interactive_thumbnail'), _createThumbnail)
+    def load(self, info):
+        events.bind('model.item.remove', __name__, lambda e: _removeThumbnails(e.info))
+        events.bind('model.file.finalizeUpload.after', __name__, _handleUpload)
+        File().ensureIndex(
+            ([('interactive_thumbnails_uid', 1), ('attachedToId', 1)], {'sparse': True}))
+        File().exposeFields(level=AccessType.READ, fields={'interactive_thumbnails_info'})
+        Item().exposeFields(level=AccessType.READ, fields={'hasInteractiveThumbnail'})
+
+        info['apiRoot'].item.route('GET', (':id', 'interactive_thumbnail', ':uid'), _getThumbnail)
+        info['apiRoot'].item.route('POST', (':id', 'interactive_thumbnail'), _createThumbnail)
