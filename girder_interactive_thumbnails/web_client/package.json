@@ -2,8 +2,7 @@
     "name": "@girder/interactive_thumbnails",
     "version": "1.0.0",
     "dependencies": {
-        "gl-matrix": "2.5.1",
-        "paraview-glance": "1.1.16"
+        "gl-matrix": "2.5.1"
     },
     "girderPlugin": {
         "name": "interactive_thumbnails",

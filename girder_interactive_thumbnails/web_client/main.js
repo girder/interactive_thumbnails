@@ -9,7 +9,6 @@ import router from 'girder/router';
 import { wrap } from 'girder/utilities/PluginUtils'
 
 import FolderListView from './folderListView/FolderListView';
-import ParaViewGlanceView from './glance/ParaViewGlance';
 import folderActionsExt from './folderActionsExt.pug';
 
 
@@ -39,16 +38,4 @@ wrap(HierarchyWidget, 'render', function (render) {
         })).insertAfter(this.$('.g-folder-actions-menu > li:first'));
     }
     return this;
-});
-
-router.route('item/:id/pv_glance', (id) => {
-    const item = new ItemModel({_id: id});
-    item.fetch().done(() => {
-        events.trigger('g:navigateTo', ParaViewGlanceView, {
-            model: item
-        }, {
-            layout: Layout.EMPTY,
-            renderNow: true
-        })
-    });
 });
