@@ -11,7 +11,7 @@ from girder_jobs.models.job import Job
 from girder_worker.docker.tasks import docker_run
 from girder_worker.docker.transforms import VolumePath
 from girder_worker.docker.transforms.girder import (
-    GirderFileIdToVolume, GirderUploadVolumePathToItem)
+    GirderItemIdToVolume, GirderUploadVolumePathToItem)
 
 _ANGLE_STEP = 20
 _SIZE = 256
@@ -81,10 +81,6 @@ def _getThumbnail(item, uid):
            default='default', enum=('default', 'CT-AAA', 'CT-Bones', 'CT-Soft-Tissue'))
 )
 def _createThumbnail(item, preset):
-    files = Item().childFiles(item, limit=2)
-    if files.count() != 1:
-        raise Exception('Can only generate thumbnails for items containing one file.')
-
     # Remove previously attached thumbnails
     _removeThumbnails(item, saveItem=True)
 
@@ -95,7 +91,7 @@ def _createThumbnail(item, preset):
             '--width', str(_SIZE),
             '--height', str(_SIZE),
             '--preset', preset,
-            GirderFileIdToVolume(files[0]['_id']),
+            GirderItemIdToVolume(item['_id'], item_name=item['name']),
             outdir
         ], girder_job_title='Interactive thumbnail generation: %s' % item['name'],
         girder_result_hooks=[
@@ -110,6 +106,8 @@ class InteractiveThumbnailsPlugin(GirderPlugin):
     CLIENT_SOURCE_PATH = 'web_client'
 
     def load(self, info):
+        getPlugin('worker').load(info)
+
         events.bind('model.item.remove', __name__, lambda e: _removeThumbnails(e.info))
         events.bind('model.file.finalizeUpload.after', __name__, _handleUpload)
         File().ensureIndex(
