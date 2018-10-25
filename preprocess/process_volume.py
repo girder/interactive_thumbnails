@@ -100,7 +100,7 @@ def setup_vr(color_fn, opacity_fn, volume_property, data):
 
 
 @click.command()
-@click.argument('in_file', type=click.Path(exists=True, dir_okay=False))
+@click.argument('in_file', type=click.Path(exists=True, dir_okay=True))
 @click.argument('out_dir', type=click.Path(file_okay=False))
 @click.option('--width', default=DEFAULT_WIDTH, help='output image width (px)')
 @click.option('--height', default=DEFAULT_HEIGHT, help='output image height (px)')
@@ -112,24 +112,29 @@ def process(in_file, out_dir, width, height, angle_step, preset):
     from vtk import (
         vtkMetaImageReader, vtkGPUVolumeRayCastMapper, vtkColorTransferFunction,
         vtkPiecewiseFunction, vtkNrrdReader, vtkVolumeProperty, vtkVolume, vtkRenderWindow,
-        vtkRenderer, vtkCamera, vtkXMLImageDataReader, VTK_LINEAR_INTERPOLATION)
+        vtkRenderer, vtkCamera, vtkXMLImageDataReader, vtkDICOMImageReader,
+        VTK_LINEAR_INTERPOLATION)
 
     from vtk.web.dataset_builder import ImageDataSetBuilder
 
     phi_vals, theta_vals = get_angle_samples(angle_step)
 
-    ext = os.path.splitext(in_file)[1].lower()
-    if ext == '.mha':
-        reader = vtkMetaImageReader()
-    elif ext == '.nrrd':
-        reader = vtkNrrdReader()
-    elif ext == '.vti':
-        reader = vtkXMLImageDataReader()
-    elif ext == '.tre':
-        # TODO refactor this to reduce duplication of visualization code
-        return process_tre(in_file, out_dir, phi_vals, theta_vals, width, height)
+    if os.path.isdir(in_file):
+        # If it's a directory, assume it's DICOM
+        reader = vtkDICOMImageReader()
     else:
-        raise Exception('Unknown file type, cannot read: ' + in_file)
+        ext = os.path.splitext(in_file)[1].lower()
+        if ext == '.mha':
+            reader = vtkMetaImageReader()
+        elif ext == '.nrrd':
+            reader = vtkNrrdReader()
+        elif ext == '.vti':
+            reader = vtkXMLImageDataReader()
+        elif ext == '.tre':
+            # TODO refactor this to reduce duplication of visualization code
+            return process_tre(in_file, out_dir, phi_vals, theta_vals, width, height)
+        else:
+            raise Exception('Unknown file type, cannot read: ' + in_file)
 
     reader.SetFileName(in_file)
     reader.Update()
@@ -151,7 +156,6 @@ def process(in_file, out_dir, width, height, angle_step, preset):
         setup_vr(color_function, scalar_opacity, volume_property, MEDICAL_XFER_PRESETS[preset])
     else:
         raise Exception('Unknown transfer function preset: %s' % preset)
-
 
     volume_property.SetInterpolationType(VTK_LINEAR_INTERPOLATION)
     volume_property.SetColor(color_function)
