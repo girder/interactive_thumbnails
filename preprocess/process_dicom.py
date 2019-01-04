@@ -129,28 +129,31 @@ def rescale_dicom_image_intensity(image, meta_dict):
         # '0028|1050' is the DICOM window Width for display (string). It is
         # used to apply an intensity windowing filter.
         width = int(meta_dict['0028|1051'])
+        intensity_winwdow_filter = itk.IntensityWindowingImageFilter.New(image)
+        # ITK versions prior to ITK 5.0.0 beta 2 do not support passing tuples
+        # directly as an argument of the `New()` function. Instead, we need to
+        # explicitely call the correct `Set` function.
+        intensity_winwdow_filter.SetWindowLevel(width, center)
+        # Image is rescaled between 0 and 255 to be saved as a JPEG later.
+        intensity_winwdow_filter.SetOutputMinimum(0)
+        intensity_winwdow_filter.SetOutputMaximum(255)
+        intensity_winwdow_filter.Update()
+        return intensity_winwdow_filter.GetOutput()
     except KeyError:
-        raise Exception("DICOM window `center` or `width` tag not found.")
-
-    intensity_winwdow_filter = itk.IntensityWindowingImageFilter.New(image)
-    # ITK versions prior to ITK 5.0.0 beta 2 do not support passing tuples
-    # directly as an argument of the `New()` function. Instead, we need to
-    # explicitely call the correct `Set` function.
-    intensity_winwdow_filter.SetWindowLevel(width, center)
-    intensity_winwdow_filter.Update()
-    return intensity_winwdow_filter.GetOutput()
+        # If either or both of the required tags are missing in the DICOM,
+        # we simply rely on the image minimum and maximum to rescale it.
+        # Image is rescaled between 0 and 255 to be saved as a JPEG later.
+        return itk.RescaleIntensityImageFilter(image, OutputMinimum=0,
+                                               OutputMaximum=255)
 
 
 def save_as_jpeg(image, out_dir, current_slice):
     # To save as a jpeg, rescale between 0 and 255 (unsigned char)
     OutputImageType = itk.Image[itk.UC, OUTPUT_IMAGE_DIMENSION]
-    rescale_intensity_for_jpeg_filter = itk.IntensityWindowingImageFilter[
-        image, OutputImageType].New(image)
-    rescale_intensity_for_jpeg_filter.SetWindowMinimum(0)
-    rescale_intensity_for_jpeg_filter.SetWindowMaximum(255)
-    rescale_intensity_for_jpeg_filter.Update()
+    cast_filter = itk.CastImageFilter[image, OutputImageType].New(image)
+    cast_filter.Update()
     output_image_filename = os.path.join(out_dir, '%d.jpg' % current_slice)
-    itk.imwrite(rescale_intensity_for_jpeg_filter.GetOutput(),
+    itk.imwrite(cast_filter.GetOutput(),
                 output_image_filename)
 
 
@@ -239,9 +242,16 @@ def process(in_dir, out_dir, width, height, slices):
 
     image = dicom_reader.GetOutput()
 
-    width, height = compute_real_width_and_height(image, width, height)
+    # Rescaling is performed on the entire input image instead of on a
+    # per-slice basis to allow rescaling the image based on its global
+    # minimum and maximum if `width` and `center` tags are not defined
+    # in the DICOM. The output of this function is scaled between 0 and 255.
+    rescaled_image = rescale_dicom_image_intensity(image, meta_dict)
 
-    image_dimension = image.GetImageDimension()
+    width, height = compute_real_width_and_height(rescaled_image, width,
+                                                  height)
+
+    image_dimension = rescaled_image.GetImageDimension()
     # Verifies that input image is 3D. This allows to simplify the logic after.
     if image_dimension != INPUT_IMAGE_DIMENSION:
         raise Exception("Input must be a %dD image. %d dimensions found." % (
@@ -253,7 +263,7 @@ def process(in_dir, out_dir, width, height, slices):
     # end and only process requested regions, e.g. slice by slice. This method
     # would be useful if one wanted to resample the image in 3D instead of
     # processing each slice independently but is not necessary for now.
-    image_size = itk.size(image)
+    image_size = itk.size(rescaled_image)
 
     size_sampling_dim = image_size[SLICING_DIMENSION]
 
@@ -267,7 +277,7 @@ def process(in_dir, out_dir, width, height, slices):
 
     region.SetSize(new_size)
     CollapsedImageType = itk.Image[itk.template(
-        image)[1][0], OUTPUT_IMAGE_DIMENSION]
+        rescaled_image)[1][0], OUTPUT_IMAGE_DIMENSION]
 
     list_indices = []
     for ii in range(slices):
@@ -277,14 +287,13 @@ def process(in_dir, out_dir, width, height, slices):
 
         region.SetIndex(image_index)
         slice_image_filter = itk.ExtractImageFilter[
-            image, CollapsedImageType].New(
-            image, ExtractionRegion=region)
+            rescaled_image, CollapsedImageType].New(
+            rescaled_image, ExtractionRegion=region)
         slice_image_filter.SetDirectionCollapseToIdentity()
         slice_image_filter.Update()
 
-        rescaled_image = rescale_dicom_image_intensity(
-            slice_image_filter.GetOutput(), meta_dict)
-        resampled_image = smooth_and_resample(rescaled_image, width, height)
+        resampled_image = smooth_and_resample(slice_image_filter.GetOutput(),
+                                              width, height)
         save_as_jpeg(resampled_image, out_dir, slice_index)
     # Generate JSON file
     generate_json(out_dir, list_indices)
