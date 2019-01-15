@@ -1,0 +1,9 @@
+FROM python:3.6
+
+MAINTAINER Francois Budin <francois.budin@kitware.com>
+
+RUN pip install click itk
+
+COPY ./preprocess/process_dicom.py /preprocess_scripts/
+
+ENTRYPOINT ["python", "/preprocess_scripts/process_dicom.py"]
