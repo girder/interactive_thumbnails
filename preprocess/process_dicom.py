@@ -125,10 +125,10 @@ def rescale_dicom_image_intensity(image, meta_dict):
     try:
         # '0028|1050' is the DICOM window Center for display (string). It is
         # used to apply an intensity windowing filter.
-        center = int(meta_dict['0028|1050'])
+        center = int(float(meta_dict['0028|1050']))
         # '0028|1050' is the DICOM window Width for display (string). It is
         # used to apply an intensity windowing filter.
-        width = int(meta_dict['0028|1051'])
+        width = int(float(meta_dict['0028|1051']))
         intensity_winwdow_filter = itk.IntensityWindowingImageFilter.New(image)
         # ITK versions prior to ITK 5.0.0 beta 2 do not support passing tuples
         # directly as an argument of the `New()` function. Instead, we need to
