@@ -176,7 +176,7 @@ def generate_json(out_dir, list_indices):
                     "mouse": {
                         "drag": {
                             "modifier": 0,
-                            "coordinate": 0,
+                            "coordinate": 1,
                             "step": 30,
                             "orientation": 1
                         }
