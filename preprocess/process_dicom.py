@@ -177,7 +177,7 @@ def generate_json(out_dir, list_indices):
                         "drag": {
                             "modifier": 0,
                             "coordinate": 1,
-                            "step": 5,
+                            "step": 10,
                             "orientation": 1
                         }
                     }
