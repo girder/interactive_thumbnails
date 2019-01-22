@@ -172,7 +172,6 @@ def generate_json(out_dir, list_indices):
                     "0",
                 ],
                 "ui": "slider",
-                "loop": "modulo",
                 "bind": {
                     "mouse": {
                         "drag": {
